@@ -178,6 +178,32 @@ end
 local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
+local function create_theme_cycler(themes, opts)
+  local function indexOf(tbl, value)
+    for i, v in ipairs(tbl) do
+      if v == value then
+        return i
+      end
+    end
+  end
+
+  local cur_index = indexOf(themes, opts.initial_theme) or 1
+
+  return function()
+    cur_index = (cur_index % #themes) + 1
+    local next_theme = themes[cur_index]
+
+    if opts.plugin_name then
+      pcall(require, opts.plugin_name)
+      require(opts.plugin_name).setup { theme = next_theme }
+    end
+
+    vim.cmd.colorscheme(opts.command_prefix .. next_theme)
+
+    vim.notify(opts.display_name .. ' theme set to: ' .. next_theme, vim.log.levels.INFO)
+  end
+end
+
 -- [[ Configure and install plugins ]]
 --
 --  To check the current status of your plugins, run
@@ -248,7 +274,7 @@ require('lazy').setup({
   -- Then, because we use the `opts` key (recommended), the configuration runs
   -- after the plugin has been loaded as `require(MODULE).setup(opts)`.
 
-  { -- Useful plugin to show you pending keybinds.
+  {                     -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     opts = {
@@ -329,7 +355,7 @@ require('lazy').setup({
       { 'nvim-telescope/telescope-ui-select.nvim' },
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-tree/nvim-web-devicons',            enabled = vim.g.have_nerd_font },
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -437,7 +463,7 @@ require('lazy').setup({
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
       -- Useful status updates for LSP.
-      { 'j-hui/fidget.nvim', opts = {} },
+      { 'j-hui/fidget.nvim',    opts = {} },
 
       -- Allows extra capabilities provided by blink.cmp
       'saghen/blink.cmp',
@@ -842,25 +868,49 @@ require('lazy').setup({
     },
   },
 
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'folke/tokyonight.nvim',
-    priority = 1000, -- Make sure to load this before all the other start plugins.
+  --  { -- You can easily change to a different colorscheme.
+  --    -- Change the name of the colorscheme plugin below, and then
+  --    -- change the command in the config to whatever the name of that colorscheme is.
+  --    --
+  --    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+  --    'folke/tokyonight.nvim',
+  --    priority = 1000, -- Make sure to load this before all the other start plugins.
+  --    config = function()
+  --      ---@diagnostic disable-next-line: missing-fields
+  --      require('tokyonight').setup {
+  --        styles = {
+  --          comments = { italic = false }, -- Disable italics in comments
+  --        },
+  --      }
+  --
+  --      -- Load the colorscheme here.
+  --      -- Like many other themes, this one has different styles, and you could load
+  --      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+  --      vim.cmd.colorscheme 'tokyonight-night'
+  --    end,
+  --  },
+
+  {
+    'rebelot/kanagawa.nvim',
+    priority = 1000,
     config = function()
-      ---@diagnostic disable-next-line: missing-fields
-      require('tokyonight').setup {
-        styles = {
-          comments = { italic = false }, -- Disable italics in comments
-        },
+      require('kanagawa').setup {
+        theme = 'dragon',
       }
 
-      -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'kanagawa-dragon'
+
+      local themes = { 'wave', 'lotus', 'dragon' }
+      local opts = {
+        initial_theme = 'dragon',
+        plugin_name = 'kanagawa',
+        command_prefix = 'kanagawa-',
+        display_name = 'Kanagawa',
+      }
+
+      local cycle_kanagawa = create_theme_cycler(themes, opts)
+
+      vim.keymap.set('n', '<leader>tc', cycle_kanagawa, { desc = '[C]ycle Kanagawa [T]heme' })
     end,
   },
 
@@ -904,6 +954,7 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
+
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
